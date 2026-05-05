@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>persaifeOS · Sleep</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#07070f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SLEEP" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#07070f;--bg1:#0c0c18;--bg2:#111120;--border:#1c1c2e;--border2:#252538;--text:#dde0f0;--dim:#555570;--dim2:#333348;--green:#00f5a0;--gold:#ffd166;--orange:#ff9d4d;--red:#ff5f6d;--blue:#6ba3ff;--purple:#b57bff;--grey:#7a7a9a;--safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px)}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Mono','Courier New',monospace;font-size:14px;overscroll-behavior:none}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:.6}
+    #app{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+    /* AUTH */
+    #auth-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 30px}
+    .auth-logo{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:.06em;margin-bottom:2px}.auth-logo span{color:var(--green)}
+    .auth-sub{font-size:8px;color:var(--dim);letter-spacing:.2em;margin-bottom:44px}
+    .auth-label{font-size:9px;color:var(--dim);letter-spacing:.15em;margin-bottom:12px;text-transform:uppercase}
+    .auth-dots{display:flex;gap:16px;margin-bottom:32px}
+    .auth-dot{width:13px;height:13px;border-radius:50%;border:1px solid var(--border2);transition:background .15s}
+    .auth-dot.filled{background:var(--green);border-color:var(--green)}
+    .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:216px}
+    .pin-btn{background:var(--bg1);border:1px solid var(--border);color:var(--text);padding:16px;font-family:'DM Mono',monospace;font-size:18px;border-radius:10px;cursor:pointer;text-align:center;transition:all .12s}
+    .pin-btn:active{background:var(--bg2);transform:scale(.94)}
+    .pin-zero{grid-column:2}.pin-del{background:none;border:none;color:var(--dim);font-size:14px}
+    .auth-err{font-size:10px;color:var(--red);margin-top:14px;min-height:16px;text-align:center}
+    /* HEADER */
+    .header{padding:calc(var(--safe-top) + 18px) 20px 14px;background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+    .eyebrow{font-size:8px;letter-spacing:.2em;color:var(--green);margin-bottom:4px;opacity:.7}
+    .htitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.06em;line-height:1}
+    .htitle span{color:var(--green)}
+    .hsub{font-size:9px;color:var(--dim);margin-top:5px;display:flex;align-items:center;gap:8px}
+    .ldot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+    /* NAV */
+    .nav{display:flex;gap:6px;padding:11px 18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+    .nav::-webkit-scrollbar{display:none}
+    .nb{flex-shrink:0;background:none;border:1px solid var(--border2);color:var(--dim);padding:5px 12px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;border-radius:4px;cursor:pointer;transition:all .15s}
+    .nb.on{border-color:var(--green);color:var(--green);background:rgba(0,245,160,.04)}
+    .nb.on-nap{border-color:var(--gold);color:var(--gold);background:rgba(255,209,102,.04)}
+    /* CONTENT */
+    .content{flex:1;overflow-y:auto;padding:14px 18px calc(var(--safe-bot)+24px);-webkit-overflow-scrolling:touch}
+    /* SYNC BAR */
+    .sbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg1);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;font-size:9px;color:var(--dim)}
+    .sbar.syncing{border-color:rgba(0,245,160,.2)}.sbar.err{border-color:rgba(255,95,109,.2);color:var(--red)}
+    /* CARDS */
+    .card{background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+    .clabel{font-size:8px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+    /* PLAYER CARDS */
+    .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .pc{background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:14px}
+    .pc.lead{border-color:rgba(0,245,160,.18)}
+    .pname{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.06em;margin-bottom:2px}
+    .pscore{font-size:42px;font-weight:300;line-height:1;margin-top:4px}
+    .pgrade{font-size:8px;margin-top:2px;letter-spacing:.1em}
+    .pstats{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 12px;border-top:1px solid var(--border);padding-top:10px}
+    .sl{font-size:7px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+    .sv{font-size:11px;margin-top:1px}
+    .gap-badge{display:inline-flex;align-items:center;gap:4px;font-size:8px;color:var(--gold);border:1px solid rgba(255,209,102,.3);border-radius:3px;padding:2px 6px;margin-top:6px}
+    /* FORM */
+    .field{margin-bottom:11px}
+    .fl{font-size:8px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+    .inp{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;font-family:'DM Mono',monospace;font-size:12px;border-radius:8px;outline:none;transition:border-color .15s;-webkit-appearance:none}
+    .inp:focus{border-color:rgba(0,245,160,.5)}.inp:disabled{opacity:.3;cursor:not-allowed}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .tier-opts{display:grid;gap:7px}
+    .topt{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:all .15s;background:var(--bg)}
+    .topt.sel{background:rgba(255,255,255,.03)}
+    .topt input{margin-top:3px;flex-shrink:0}
+    .tname{font-size:10px;margin-bottom:2px}.tdesc{font-size:8px;color:var(--dim);line-height:1.5;font-style:italic}
+    .pbw{margin-bottom:8px}.pbm{display:flex;justify-content:space-between;font-size:8px;color:var(--dim);margin-bottom:3px}
+    .pbt{height:4px;background:var(--bg2);border-radius:2px;position:relative}
+    .pbf{height:100%;border-radius:2px;transition:width .5s ease}
+    .pbtgt{position:absolute;top:-3px;width:1px;height:10px;background:rgba(255,255,255,.12)}
+    .preview{text-align:center;padding:16px;border-radius:10px;background:var(--bg);border:1px solid;margin-bottom:11px}
+    .pnum{font-size:56px;font-weight:300;line-height:1}
+    .pglabel{font-size:9px;margin-top:2px;letter-spacing:.1em}
+    .pmeta{font-size:9px;color:var(--dim);margin-top:6px}
+    .btn{width:100%;padding:12px;border:none;border-radius:9px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;cursor:pointer;transition:opacity .15s,transform .1s}
+    .btn:active{transform:scale(.98)}.btn-p{background:var(--green);color:#07070f}.btn-n{background:var(--gold);color:#07070f}
+    .snav{display:flex;gap:7px;margin-bottom:14px}
+    .he{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .eleft{flex:1;min-width:0}.emeta{font-size:9px;color:var(--dim);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .etimes{font-size:11px;margin-top:3px}.edetail{font-size:9px;color:var(--dim);margin-top:3px}
+    .ephases{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px}.enap{font-size:8px;margin-top:4px}
+    .eright{text-align:right;flex-shrink:0}.ens{font-size:10px;color:var(--dim);text-decoration:line-through}
+    .efin{font-size:30px;font-weight:300;line-height:1}.egr{font-size:8px;letter-spacing:.08em}
+    .tbadge{display:inline-flex;align-items:center;font-size:8px;border-radius:3px;padding:2px 6px;border:1px solid;letter-spacing:.06em}
+    .rrow{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);gap:8px}
+    .rdot{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-top:3px}
+    .rname{font-size:10px;color:var(--text)}.rdesc{font-size:8px;color:var(--dim);margin-top:2px;line-height:1.4}
+    .rpts{font-size:13px;font-weight:300;flex-shrink:0}
+    .nrow{padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .empty{text-align:center;padding:50px 20px;color:var(--dim);font-size:12px;line-height:1.8}
+    .wm{text-align:center;padding:20px 0 4px;font-size:8px;color:var(--dim2);letter-spacing:.15em}
+  </style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-logo">persaife<span>OS</span></div>
+  <div class="auth-sub">SLEEP SYSTEM · FAMILY</div>
+  <div class="auth-label">Enter PIN</div>
+  <div class="auth-dots"><div class="auth-dot" id="d0"></div><div class="auth-dot" id="d1"></div><div class="auth-dot" id="d2"></div><div class="auth-dot" id="d3"></div></div>
+  <div class="pin-grid">
+    <button class="pin-btn" onclick="pp('1')">1</button><button class="pin-btn" onclick="pp('2')">2</button><button class="pin-btn" onclick="pp('3')">3</button>
+    <button class="pin-btn" onclick="pp('4')">4</button><button class="pin-btn" onclick="pp('5')">5</button><button class="pin-btn" onclick="pp('6')">6</button>
+    <button class="pin-btn" onclick="pp('7')">7</button><button class="pin-btn" onclick="pp('8')">8</button><button class="pin-btn" onclick="pp('9')">9</button>
+    <button class="pin-btn pin-zero" onclick="pp('0')">0</button><button class="pin-btn pin-del" onclick="pd()">⌫</button>
+  </div>
+  <div class="auth-err" id="aerr"></div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="eyebrow">persaifeOS · LIFE OS</div>
+    <div class="htitle">SLEEP <span>BOARD</span></div>
+    <div class="hsub"><span class="ldot"></span><span id="ltxt">Loading...</span></div>
+  </div>
+  <div class="nav" id="mnav">
+    <button class="nb on" data-v="board">BOARD</button>
+    <button class="nb" data-v="log">LOG</button>
+    <button class="nb" data-v="history">HISTORY</button>
+    <button class="nb" data-v="rubric">RUBRIC</button>
+  </div>
+  <div class="content" id="ct"></div>
+</div>
+
+<script>
+const WH='https://script.google.com/macros/s/AKfycbxIOcnup2GNuS_I2o9xBgcrfb46rqEUQzmri4DI0eCYMqrD_SBFcHnuoUUPZdCIErGn/exec';
+const PIN='2025'; // ← SET YOUR FAMILY PIN HERE
+const LK='ps-sleep-v4';
+const AK='ps-auth-v4';
+const PLAYERS=['Joey','Dad','Ivy','Kiki','Dada','Maximus'];
+const GAP_H=24;
+
+const TRUST={
+  T1:{label:'⌚ Watch Auto',   color:'#00f5a0',wp:10,pm:1.0,dm:1.0},
+  T2:{label:'📱 Health Manual',color:'#ffd166',wp:5, pm:0.5,dm:1.0},
+  T3:{label:'✏️ Unverified',   color:'#ff5f6d',wp:0, pm:0.0,dm:0.65},
+};
+const TD={T1:'Watch worn all night → full score',T2:'Health entry → timing ok, phases ×0.5',T3:'Memory guess → ×0.65, no phases'};
+
+let st={entries:[],streaks:{},lastSync:null};
+let ss='idle';
+let cv='board',lsv='night';
+let nf=dNF(),napf=dNapF();
+
+function dNF(){return{player:'Joey',date:td(),bedtime:'23:30',wakeTime:'07:00',trustTier:'T1',deepPct:'',remPct:'',corePct:'',awakePct:''}}
+function dNapF(){return{player:'Joey',napStart:'13:30',napDurMin:'25',trustTier:'T1'}}
+
+// ── AUTH
+let pb='';
+function pp(d){if(pb.length>=4)return;pb+=d;dots();if(pb.length===4)setTimeout(chk,100)}
+function pd(){pb=pb.slice(0,-1);dots();document.getElementById('aerr').textContent=''}
+function dots(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<pb.length)}
+function chk(){
+  if(pb===PIN){localStorage.setItem(AK,'1');document.getElementById('auth-screen').style.display='none';show();init();}
+  else{document.getElementById('aerr').textContent='Incorrect PIN';pb='';dots()}
+}
+function show(){const a=document.getElementById('app');a.style.display='flex';a.style.flexDirection='column'}
+
+// ── INIT
+function init(){loadL();render();sync()}
+function loadL(){try{const s=localStorage.getItem(LK);if(s)st=JSON.parse(s)}catch{}}
+function saveL(){try{localStorage.setItem(LK,JSON.stringify(st))}catch{}}
+
+// ── SYNC
+async function sync(){
+  ss='syncing';rSB();
+  try{
+    const r=await fetch(WH+'?t='+Date.now());
+    const rows=await r.json();
+    if(Array.isArray(rows)&&rows.length){
+      const se=rows.filter(r=>r['Date']&&r['Player']).map(r=>({
+        id:r['Date']+'-'+r['Player'],type:'night',
+        player:String(r['Player']),date:String(r['Date']),
+        bedtime:r['Bedtime']||'',wakeTime:r['Wake Time']||'',
+        duration:parseFloat(r['Total\nHours']||r['Total Hours']||0)||0,
+        trustTier:tw(r['Watch\nWorn?']||r['Watch Worn?']||''),
+        streak:parseInt(r['Streak\n(days)']||r['Streak (days)']||0)||0,
+        nightScore:parseInt(r['SCORE'])||0,finalScore:parseInt(r['SCORE'])||0,napMod:0,
+        deepPct:pF(r['Deep\n% (HRV)']||r['Deep % (HRV)']),
+        remPct:pF(r['REM\n%']||r['REM %']),
+        corePct:pF(r['Core\n%']||r['Core %']),
+        awakePct:pF(r['Awake\n%']||r['Awake %']),
+      }));
+      const lo=st.entries.filter(e=>!se.find(s=>s.date===e.date&&s.player===e.player));
+      st.entries=[...se,...lo].sort((a,b)=>b.date.localeCompare(a.date));
+      calcStreaks();saveL();
+    }
+    ss='ok';st.lastSync=new Date().toISOString();
+  }catch{ss='error'}
+  render();
+}
+async function post(payload){
+  try{await fetch(WH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),mode:'no-cors'})}catch{}
+}
+function tw(v){if(!v)return'T1';const s=String(v).toLowerCase();if(s==='yes'||s==='t1')return'T1';if(s==='manual'||s==='t2')return'T2';return'T3'}
+function pF(v){const n=parseFloat(v);return isNaN(n)?null:n}
+
+// ── UTILS
+function td(){return new Date().toISOString().slice(0,10)}
+function yd(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)}
+function t2d(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h+m/60}
+function dur(b,w){let bd=t2d(b),wd=t2d(w);if(wd<=bd)wd+=24;return+(wd-bd).toFixed(2)}
+function pP(v){return v!==''?parseFloat(v):null}
+function gc(s){if(s>=90)return'#00f5a0';if(s>=75)return'#7bffcc';if(s>=60)return'#ffd166';if(s>=45)return'#ff9d4d';return'#ff5f6d'}
+function gl(s){if(s>=90)return'ELITE';if(s>=75)return'SOLID';if(s>=60)return'OKAY';if(s>=45)return'DRIFTING';return'WRECKED'}
+
+// ── SCORING
+function score({duration,deepPct,remPct,corePct,awakePct,tier,streak}){
+  const t=TRUST[tier]||TRUST.T3;
+  const d=Math.max(0,30-Math.abs(duration-7.5)*10)*t.dm;
+  const dp=(deepPct !=null?Math.max(0,20-Math.abs(deepPct -20)*2)  :10)*t.pm;
+  const rm=(remPct  !=null?Math.max(0,15-Math.abs(remPct  -22)*1.5):7.5)*t.pm;
+  const cr=(corePct !=null?Math.max(0,10-Math.abs(corePct -52)/2)  :5)  *t.pm;
+  const aw=(awakePct!=null?Math.max(0,10-Math.max(0,awakePct-5)*2) :5)  *t.pm;
+  const str=Math.min(5,(streak||0)*0.5);
+  return Math.round(d+dp+rm+cr+aw+t.wp+str);
+}
+function napMod(h,m){
+  if(h>=17)return{pts:-10,label:'Late nap — kills deep sleep 🔴'};
+  if(h>=15)return{pts:3,label:'Neutral zone ⚠️'};
+  if(m>=75&&m<=105)return{pts:10,label:'Full cycle — elite recovery 🟢'};
+  if(m>=15&&m<=35)return{pts:9,label:'Power nap — clean boost 🟢'};
+  if(m>=36&&m<=74)return{pts:5,label:'Mid-length nap ✅'};
+  return{pts:3,label:'Short pre-3pm nap ✅'};
+}
+
+// ── GAP
+function calcStreaks(){
+  PLAYERS.forEach(p=>{
+    const pe=st.entries.filter(e=>e.player===p&&e.type==='night').sort((a,b)=>b.date.localeCompare(a.date));
+    if(!pe.length){st.streaks[p]=0;return}
+    let s=1,prev=pe[0].date;
+    for(let i=1;i<pe.length;i++){
+      const diff=(new Date(prev)-new Date(pe[i].date))/(864e5);
+      if(diff===1){s++;prev=pe[i].date}else break;
+    }
+    st.streaks[p]=s;
+  });
+}
+function gapStatus(player){
+  const pe=st.entries.filter(e=>e.player===player&&e.type==='night');
+  if(!pe.length)return null;
+  const last=pe.sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(last.date===td()||last.date===yd())return null;
+  const h=(new Date()-new Date(last.date+'T12:00:00'))/(36e5)-24;
+  return h<GAP_H?{type:'pending',h:Math.round(h)}:{type:'locked'};
+}
+
+// ── PLAYER STATS
+function pStats(){
+  return PLAYERS.map(p=>{
+    const pe=st.entries.filter(e=>e.player===p&&e.type==='night');
+    const avg=pe.length?Math.round(pe.reduce((s,e)=>s+e.finalScore,0)/pe.length):null;
+    const wd=pe.filter(e=>e.deepPct!=null),wr=pe.filter(e=>e.remPct!=null);
+    return{player:p,avg,streak:st.streaks[p]||0,
+      best:pe.length?Math.max(...pe.map(e=>e.finalScore)):null,count:pe.length,
+      avgDeep:wd.length?+(wd.reduce((s,e)=>s+e.deepPct,0)/wd.length).toFixed(1):null,
+      avgRem:wr.length?+(wr.reduce((s,e)=>s+e.remPct,0)/wr.length).toFixed(1):null,
+      t1:pe.length?Math.round(pe.filter(e=>e.trustTier==='T1').length/pe.length*100):null,
+      gap:gapStatus(p)};
+  }).filter(p=>p.count>0||['Joey','Dad'].includes(p.player))
+    .sort((a,b)=>(b.avg||0)-(a.avg||0));
+}
+
+// ── RENDER
+function render(){
+  const stats=pStats();
+  const lead=stats.find(s=>s.avg!=null);
+  document.getElementById('ltxt').textContent=lead?`${lead.player} leading · ${lead.avg} avg`:'Log tonight to begin';
+  const c=document.getElementById('ct');
+  if(cv==='board')c.innerHTML=rBoard(stats);
+  if(cv==='log')c.innerHTML=rLog();
+  if(cv==='history')c.innerHTML=rHist();
+  if(cv==='rubric')c.innerHTML=rRubric();
+  attach();
+}
+function rSB(){const e=document.getElementById('sb');if(e)e.outerHTML=sbH()}
+function sbH(){
+  const ic={idle:'○',syncing:'◌',ok:'●',error:'✕'};
+  const cl={idle:'var(--dim)',syncing:'var(--green)',ok:'var(--green)',error:'var(--red)'};
+  const ms={idle:'Not synced',syncing:'Syncing...',ok:`Synced ${st.lastSync?new Date(st.lastSync).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''}`,error:'Offline mode'};
+  return`<div class="sbar ${ss==='error'?'err':ss==='syncing'?'syncing':''}" id="sb">
+    <span style="color:${cl[ss]}">${ic[ss]}</span><span>${ms[ss]}</span>
+    ${ss!=='syncing'?`<button onclick="sync()" style="margin-left:auto;background:none;border:none;color:var(--dim);font-size:9px;cursor:pointer;font-family:inherit">REFRESH</button>`:''}
+  </div>`;
+}
+
+// ── BOARD
+function rBoard(stats){
+  const cards=stats.map((p,i)=>{
+    const col=p.avg!=null?gc(p.avg):'var(--dim2)';
+    const gH=p.gap?`<div class="gap-badge">${p.gap.type==='pending'?`⚠️ Missing · ${GAP_H-p.gap.h}h to backfill`:'🔒 Gap locked · streak reset'}</div>`:'';
+    const strD=p.gap?.type==='pending'?`${p.streak}d ⏸`:`${p.streak}d 🔥`;
+    return`<div class="pc ${i===0&&p.avg!=null?'lead':''}">
+      ${i===0&&p.avg!=null?'<div style="font-size:7px;color:var(--green);letter-spacing:.12em;margin-bottom:5px">LEADING</div>':''}
+      <div class="pname">${p.player}</div>
+      <div class="pscore" style="color:${col}">${p.avg??'--'}</div>
+      ${p.avg!=null?`<div class="pgrade" style="color:${col}">${gl(p.avg)}</div>`:''}
+      ${gH}
+      <div class="pstats">${[['Streak',strD],['Best',p.best??'--'],['Nights',p.count],['Avg Deep',p.avgDeep!=null?p.avgDeep+'%':'--'],['Avg REM',p.avgRem!=null?p.avgRem+'%':'--'],['Watch',p.t1!=null?p.t1+'%':'--']].map(([k,v])=>`<div><div class="sl">${k}</div><div class="sv">${v}</div></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  return`${sbH()}<div class="pgrid">${cards}</div>
+  <div class="card"><div class="clabel">NAP MODIFIER</div>
+    ${[['Before 3pm · 75–105min','Full cycle','+10','var(--green)'],['Before 3pm · 15–35min','Power nap','+9','var(--green)'],['Before 3pm · 36–74min','Mid-length','+5','var(--green)'],['3pm–5pm · any','Neutral zone','+3','var(--gold)'],['After 5pm · any','Kills deep sleep','−10','var(--red)']].map(([w,d,p,c])=>`<div class="nrow"><div><div style="font-size:10px">${w}</div><div style="font-size:8px;color:var(--dim)">${d}</div></div><div style="font-size:15px;color:${c};font-weight:300">${p}</div></div>`).join('')}
+    <div style="font-size:8px;color:var(--dim2);margin-top:8px;font-style:italic">Max daily: 105 · Floor: 0</div>
+  </div><div class="wm">persaifeOS · SLEEP SYSTEM v4</div>`;
+}
+
+// ── LOG
+function rLog(){
+  return`<div class="snav"><button class="nb ${lsv==='night'?'on':''}" data-sv="night">🌙 NIGHT</button><button class="nb ${lsv==='nap'?'on-nap':''}" data-sv="nap">☀️ NAP</button></div>${lsv==='night'?rNL():rNapL()}`;
+}
+function rNL(){
+  const d=nf.bedtime&&nf.wakeTime?dur(nf.bedtime,nf.wakeTime):null;
+  const pv=d?score({duration:d,tier:nf.trustTier,streak:(st.streaks[nf.player]||0)+1,deepPct:pP(nf.deepPct),remPct:pP(nf.remPct),corePct:pP(nf.corePct),awakePct:pP(nf.awakePct)}):null;
+  const phD=nf.trustTier==='T3';
+  const phN=phD?'⚠️ Phases locked at T3':nf.trustTier==='T2'?'⚠️ Phase scores ×0.5':'Full phase credit — from Apple Health';
+  const showB=['deepPct','remPct','corePct','awakePct'].some(k=>nf[k]!=='')&&!phD;
+  return`<div class="card"><div class="clabel">LOG LAST NIGHT</div>
+    <div class="g2">
+      <div class="field"><div class="fl">Player</div><select class="inp" id="nf-p">${PLAYERS.map(p=>`<option ${nf.player===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="field"><div class="fl">Date</div><input type="date" class="inp" id="nf-d" value="${nf.date}"/></div>
+    </div>
+    <div class="g2">
+      <div class="field"><div class="fl">Bedtime</div><input type="time" class="inp" id="nf-b" value="${nf.bedtime}"/></div>
+      <div class="field"><div class="fl">Wake Time</div><input type="time" class="inp" id="nf-w" value="${nf.wakeTime}"/></div>
+    </div>
+    <div class="field"><div class="fl" style="margin-bottom:8px">Trust Tier</div>
+      <div class="tier-opts">${Object.entries(TRUST).map(([k,t])=>`<label class="topt ${nf.trustTier===k?'sel':''}" style="border-color:${nf.trustTier===k?t.color+'44':'transparent'}">
+        <input type="radio" name="tr" value="${k}" ${nf.trustTier===k?'checked':''}/>
+        <div><div class="tname" style="color:${t.color}">${t.label}</div><div class="tdesc">${TD[k]}</div></div>
+      </label>`).join('')}</div>
+    </div>
+    <div class="field" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div class="fl" style="color:rgba(0,245,160,.5);margin-bottom:4px">Sleep Phases</div>
+      <div style="font-size:8px;color:var(--dim);margin-bottom:10px;font-style:italic">${phN}</div>
+      <div class="g2" style="opacity:${phD?.3:1}">
+        ${[['deepPct','Deep %','#6ba3ff'],['remPct','REM %','#b57bff'],['corePct','Core %','#7a7a9a'],['awakePct','Awake %','#ff5f6d']].map(([k,l,c])=>`<div class="field" style="margin-bottom:0"><div class="fl" style="color:${c}">${l}</div><input type="number" class="inp" id="nf-${k}" min="0" max="100" placeholder="—" value="${nf[k]}" ${phD?'disabled':''} style="border-color:${nf[k]!==''?c+'55':'var(--border2)'}"/></div>`).join('')}
+      </div>
+      ${showB?`<div style="margin-top:12px">${[['Deep',pP(nf.deepPct),'#6ba3ff',20,40],['REM',pP(nf.remPct),'#b57bff',22,40],['Core',pP(nf.corePct),'#7a7a9a',52,80],['Awake',pP(nf.awakePct),'#ff5f6d',5,20]].map(([l,v,c,t,mx])=>pBar(l,v,c,t,mx)).join('')}</div>`:''}
+    </div>
+    ${pv!=null?`<div class="preview" style="border-color:${gc(pv)}44"><div class="pnum" style="color:${gc(pv)}">${pv}</div><div class="pglabel" style="color:${gc(pv)}">${gl(pv)}</div><div class="pmeta">${d?.toFixed(1)}h · streak ${(st.streaks[nf.player]||0)+1}d</div></div>`:''}
+    <button class="btn btn-p" id="lnb">LOG NIGHT</button>
+  </div>`;
+}
+function rNapL(){
+  const h=napf.napStart?t2d(napf.napStart):null;
+  const dm=parseFloat(napf.napDurMin)||0;
+  const mod=(h!=null&&dm>0)?napMod(h,dm):null;
+  return`<div class="card" style="border-color:rgba(255,209,102,.12)">
+    <div class="clabel" style="color:var(--gold)">LOG A NAP</div>
+    <div style="font-size:8px;color:var(--dim);margin-bottom:14px;font-style:italic">Attaches to today's night entry · adjusts daily score</div>
+    <div class="field"><div class="fl">Player</div><select class="inp" id="np-p">${PLAYERS.map(p=>`<option ${napf.player===p?'selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="g2">
+      <div class="field"><div class="fl">Nap Start</div><input type="time" class="inp" id="np-s" value="${napf.napStart}"/></div>
+      <div class="field"><div class="fl">Duration (min)</div><input type="number" class="inp" id="np-d" min="5" max="180" placeholder="25" value="${napf.napDurMin}"/></div>
+    </div>
+    <div class="field"><div class="fl">Source</div><select class="inp" id="np-t"><option value="T1" ${napf.trustTier==='T1'?'selected':''}>⌚ Watch Auto</option><option value="T2" ${napf.trustTier==='T2'?'selected':''}>📱 Health Manual</option><option value="T3" ${napf.trustTier==='T3'?'selected':''}>✏️ Estimate</option></select></div>
+    ${mod?`<div class="preview" style="border-color:${mod.pts>0?'rgba(255,209,102,.3)':'rgba(255,95,109,.3)'}"><div class="pnum" style="color:${mod.pts>0?'var(--gold)':'var(--red)'}">${mod.pts>0?'+':''}${mod.pts}</div><div style="font-size:9px;color:var(--dim);margin-top:6px">${mod.label}</div></div>`:''}
+    <button class="btn btn-n" id="lnpb">LOG NAP</button>
+  </div>`;
+}
+function pBar(l,v,c,t,mx){
+  const pct=v!=null?Math.min(100,(v/mx)*100):0,tP=Math.min(100,(t/mx)*100);
+  return`<div class="pbw"><div class="pbm"><span>${l}</span><span style="color:${c}">${v!=null?v+'%':'—'} <span style="color:var(--dim2)">/ ${t}% ideal</span></span></div><div class="pbt"><div class="pbf" style="width:${pct}%;background:${c}"></div><div class="pbtgt" style="left:${tP}%"></div></div></div>`;
+}
+
+// ── HISTORY
+function rHist(){
+  if(!st.entries.length)return`<div class="empty">No entries yet.<br>Log your first night to begin.</div>`;
+  return st.entries.map(e=>{
+    const t=TRUST[e.trustTier]||TRUST.T3,s=e.finalScore??e.nightScore,hN=e.napMod&&e.napMod!==0;
+    const ph=[e.deepPct!=null?`<span style="font-size:8px;color:#6ba3ff">D ${e.deepPct}%</span>`:'',e.remPct!=null?`<span style="font-size:8px;color:#b57bff">R ${e.remPct}%</span>`:'',e.corePct!=null?`<span style="font-size:8px;color:#7a7a9a">C ${e.corePct}%</span>`:'',e.awakePct!=null?`<span style="font-size:8px;color:#ff5f6d">A ${e.awakePct}%</span>`:''].filter(Boolean).join('');
+    return`<div class="he"><div class="eleft">
+      <div class="emeta"><span>${e.date}</span><span>·</span><span>${e.player}</span><span class="tbadge" style="color:${t.color};border-color:${t.color}55">${t.label}</span></div>
+      <div class="etimes">${e.bedtime} → ${e.wakeTime} <span style="color:var(--dim)">${e.duration?.toFixed?.(1)}h</span></div>
+      <div class="edetail">🔥 ${e.streak}d</div>
+      ${ph?`<div class="ephases">${ph}</div>`:''}
+      ${hN?`<div class="enap" style="color:${e.napMod>0?'var(--gold)':'var(--red)'}">☀️ Nap ${e.napMod>0?'+':''}${e.napMod}</div>`:''}
+    </div><div class="eright">
+      ${hN?`<div class="ens">${e.nightScore}</div>`:''}
+      <div class="efin" style="color:${gc(s)}">${s}</div>
+      <div class="egr" style="color:${gc(s)}">${gl(s)}</div>
+    </div></div>`;
+  }).join('')+'<div class="wm">persaifeOS · SLEEP SYSTEM v4</div>';
+}
+
+// ── RUBRIC
+function rRubric(){
+  return`<div class="card"><div class="clabel">NIGHT SCORE · 95 PTS MAX</div>
+    ${[['Duration','0–30','Peak 7.5h · −5/30min off','#dde0f0'],['Deep Sleep %','0–20','Peak 20% · −2/1% off','#6ba3ff'],['REM Sleep %','0–15','Peak 22% · −1.5/1% off','#b57bff'],['Core Sleep %','0–10','Peak 52% · mild penalty','#7a7a9a'],['Awake %','0–10','10 if <5% · −2/1% over','#ff5f6d'],['Watch / Source','0–10','Auto=10 · Manual=5 · Guess=0','#ffd166'],['Streak Bonus','0–5','+0.5/night · max 5','#00f5a0']].map(([k,p,d,c])=>`<div class="rrow"><div class="rdot" style="background:${c}"></div><div style="flex:1"><div class="rname">${k} <span style="color:var(--dim);font-size:9px">(${p})</span></div><div class="rdesc">${d}</div></div></div>`).join('')}
+  </div>
+  <div class="card" style="border-color:rgba(255,209,102,.15)"><div class="clabel" style="color:var(--gold)">NAP MODIFIER · −10 to +10</div>
+    ${[['Before 3pm · 75–105min','+10','Full cycle','#00f5a0'],['Before 3pm · 15–35min','+9','Power nap','#00f5a0'],['Before 3pm · 36–74min','+5','Mid-length','#7bffcc'],['3pm–5pm · any','+3','Neutral zone','#ffd166'],['After 5pm · any','−10','Kills deep sleep','#ff5f6d']].map(([w,p,d,c])=>`<div class="rrow"><div style="flex:1"><div class="rname">${w}</div><div class="rdesc">${d}</div></div><div class="rpts" style="color:${c}">${p}</div></div>`).join('')}
+  </div>
+  <div class="card"><div class="clabel">GAP HANDLING</div>
+    ${[['Missing < 24h','? shown · streak paused · backfill open','#ffd166'],['Missing > 24h','Gap locked · streak resets · no score penalty','#ff9d4d'],['Backfill within 24h','Normal score · streak resumes','#00f5a0']].map(([k,d,c])=>`<div class="rrow"><div class="rdot" style="background:${c}"></div><div style="flex:1"><div class="rname">${k}</div><div class="rdesc">${d}</div></div></div>`).join('')}
+  </div>
+  <div class="card"><div class="clabel">TRUST TIERS</div>
+    ${Object.entries(TRUST).map(([k,t])=>`<div class="rrow"><div class="rdot" style="background:${t.color}"></div><div style="flex:1"><div class="rname" style="color:${t.color}">${t.label}</div><div class="rdesc">Dur ×${t.dm} · Phases ×${t.pm} · Watch ${t.wp}pts</div></div></div>`).join('')}
+  </div><div class="wm">persaifeOS · SLEEP SYSTEM v4</div>`;
+}
+
+// ── ATTACH
+function attach(){
+  document.querySelectorAll('#mnav .nb').forEach(b=>b.addEventListener('click',()=>{cv=b.dataset.v;document.querySelectorAll('#mnav .nb').forEach(x=>x.classList.remove('on'));b.classList.add('on');render()}));
+  document.querySelectorAll('[data-sv]').forEach(b=>b.addEventListener('click',()=>{lsv=b.dataset.sv;render()}));
+  const sy=(id,o,k)=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>{o[k]=e.value;render()})};
+  sy('nf-p',nf,'player');sy('nf-d',nf,'date');sy('nf-b',nf,'bedtime');sy('nf-w',nf,'wakeTime');
+  sy('nf-deepPct',nf,'deepPct');sy('nf-remPct',nf,'remPct');sy('nf-corePct',nf,'corePct');sy('nf-awakePct',nf,'awakePct');
+  document.querySelectorAll('input[name="tr"]').forEach(r=>r.addEventListener('change',()=>{nf.trustTier=r.value;render()}));
+  sy('np-p',napf,'player');sy('np-s',napf,'napStart');sy('np-d',napf,'napDurMin');sy('np-t',napf,'trustTier');
+
+  const lb=document.getElementById('lnb');
+  if(lb)lb.addEventListener('click',()=>{
+    const d=dur(nf.bedtime,nf.wakeTime),str=(st.streaks[nf.player]||0)+1;
+    const sc=score({duration:d,tier:nf.trustTier,streak:str,deepPct:pP(nf.deepPct),remPct:pP(nf.remPct),corePct:pP(nf.corePct),awakePct:pP(nf.awakePct)});
+    const entry={id:Date.now(),type:'night',player:nf.player,date:nf.date,bedtime:nf.bedtime,wakeTime:nf.wakeTime,duration:d,trustTier:nf.trustTier,streak:str,nightScore:sc,napMod:0,finalScore:sc,deepPct:pP(nf.deepPct),remPct:pP(nf.remPct),corePct:pP(nf.corePct),awakePct:pP(nf.awakePct)};
+    st.entries.unshift(entry);if(st.entries.length>120)st.entries.pop();
+    st.streaks[nf.player]=str;saveL();
+    post({...entry,watchWorn:nf.trustTier});
+    nf=dNF();render();
+  });
+
+  const npb=document.getElementById('lnpb');
+  if(npb)npb.addEventListener('click',()=>{
+    const h=t2d(napf.napStart),dm=parseFloat(napf.napDurMin)||0,mod=napMod(h,dm);
+    const tds=td();
+    st.entries=st.entries.map(e=>{
+      if(e.type==='night'&&e.player===napf.player&&e.date===tds){
+        const nm=Math.max(-10,Math.min(10,(e.napMod||0)+mod.pts));
+        return{...e,napMod:nm,finalScore:Math.max(0,e.nightScore+nm),napLabel:mod.label,napTime:napf.napStart,napDur:dm};
+      }return e;
+    });
+    saveL();napf=dNapF();render();
+  });
+
+  const rb=document.getElementById('sb');
+  if(rb)rb.querySelector('button')?.addEventListener('click',sync);
+}
+
+// ── BOOT
+if(localStorage.getItem(AK)==='1'){document.getElementById('auth-screen').style.display='none';show();init();}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
